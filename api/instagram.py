@@ -6,6 +6,7 @@ from functools import partial
 
 from models.instagram import Post, Paging
 from utils.iso import to_filename
+from utils.templates import grid_template, save_template
 
 USER_MEDIA_URL = "https://graph.instagram.com/me/media?fields=id,caption,media_url,media_type,timestamp,children{id,media_url}"
 
@@ -22,7 +23,7 @@ def query_string(access_token, paging: Paging = None, limit: int = DEFAULT_PAGE_
     return params
 
 
-def fetch(access_token, paging: Paging = None, limit: int = DEFAULT_PAGE_LIMIT):
+def fetch_media(access_token, paging: Paging = None, limit: int = DEFAULT_PAGE_LIMIT):
     response = requests.get(
         USER_MEDIA_URL, params=query_string(access_token, paging, limit)
     )
@@ -64,3 +65,43 @@ def download_media(posts: List[Post], output):
     pool.map(download_func, posts)
     pool.close()
     pool.join()
+
+
+def list_all(access_token, limit: int = DEFAULT_PAGE_LIMIT) -> List[Post]:
+    all_posts: List[Post] = []
+    current_paging = None
+
+    posts, paging = fetch_media(access_token, limit=limit)
+    all_posts.extend(posts)
+    current_paging = paging
+    paging_count = 1
+
+    while current_paging is not None and current_paging.has_next_cursor():
+        posts, paging = fetch_media(access_token, current_paging, limit=limit)
+        all_posts.extend(posts)
+        current_paging = paging
+        paging_count += 1
+
+    return (all_posts, paging_count)
+
+
+def download_all(access_token, output, limit: int = DEFAULT_PAGE_LIMIT) -> List[Post]:
+    all_posts: List[Post] = []
+    current_paging = None
+
+    posts, paging = fetch_media(access_token, limit=limit)
+    all_posts.extend(posts)
+    current_paging = paging
+    download_media(posts, output)
+
+    while current_paging is not None and current_paging.has_next_cursor():
+        posts, paging = fetch_media(access_token, current_paging, limit=limit)
+        all_posts.extend(posts)
+        current_paging = paging
+        download_media(posts, output)
+
+    return all_posts
+
+
+def save_page(all_posts: List[Post], output):
+    save_template(output, "all_posts", grid_template(all_posts))

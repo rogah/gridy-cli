@@ -1,12 +1,11 @@
 from typing import List
-import os
 from shutil import rmtree
+import os
 import click
 
 from models.instagram import Post
 
 from api.instagram import (
-    fetch_media,
     list_all,
     download_all,
     save_page,

@@ -17,6 +17,9 @@ HTML_PAGE = """
       }
       .media {
         position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       .info {
         box-sizing: border-box;
